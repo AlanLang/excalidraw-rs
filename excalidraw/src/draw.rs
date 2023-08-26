@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 
 fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
     let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
-    let stroke_color = srgba_from_hex(&element.stroke_color).unwrap_or(default_color);
-    let fill_color = srgba_from_hex(&element.background_color).unwrap_or(default_color);
+    let stroke_color =
+        srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
+    let fill_color =
+        srgba_from_hex(&element.background_color, element.opacity).unwrap_or(default_color);
     let options = OptionsBuilder::default()
         .seed(element.seed)
         .fill_style(element.fill_style.into_roughr())
@@ -50,7 +52,7 @@ pub fn draw(ctx: &mut impl RenderContext, elements: &Vec<Element>, config: &Draw
     }
 }
 
-fn srgba_from_hex(hex: &str) -> Option<Srgba> {
+fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
     // Remove the leading '#' if it exists
     let hex = hex.trim_start_matches('#');
 
@@ -63,11 +65,14 @@ fn srgba_from_hex(hex: &str) -> Option<Srgba> {
     let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
     let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
     let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
-    let a = if hex.len() == 8 {
+    let mut a = if hex.len() == 8 {
         u8::from_str_radix(&hex[6..8], 16).ok()?
     } else {
         255 // Default alpha value
     };
+
+    // Apply the opacity scaling from 0 to 100 to 0 to 255
+    a = (a as f32 * (opacity as f32 / 100.0)) as u8;
 
     // Create an Srgba object
     Some(Srgba::new(r, g, b, a).into_format())

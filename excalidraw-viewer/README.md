@@ -9,4 +9,4 @@
   * [x] Stroke Style
   * [x] Sloppiness
   * [ ] Edges
-  * [ ] Opacity
+  * [x] Opacity

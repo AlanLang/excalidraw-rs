@@ -81,7 +81,7 @@ pub struct Element {
     pub stroke_width: f32,
     pub stroke_style: StrokeStyle,
     pub roughness: f32,
-    pub opacity: i64,
+    pub opacity: u8,
     pub seed: u64,
     pub version: i64,
     pub version_nonce: i64,
