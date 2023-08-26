@@ -42,8 +42,8 @@ async fn image_file(Path(path): Path<String>) -> impl IntoResponse {
 
     match make_electrical_diagram(&file_path) {
         Ok(content) => content,
-        Err(_) => {
-            let not_found = "File not found";
+        Err(e) => {
+            let not_found = e.to_string();
             let mut res = Response::new(Body::from(not_found));
             *res.status_mut() = StatusCode::NOT_FOUND;
             res
@@ -68,7 +68,7 @@ fn get_excalidraw(file_path: &str) -> Result<Excalidraw> {
 }
 
 fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
-    let padding = 30 as f32;
+    let padding = 100 as f32;
     let mut device = Device::new().map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     let rect = excalidraw.get_canvas_size();
     let scale_factor = 4.0; // 4倍的缩放因子

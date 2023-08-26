@@ -1,20 +1,33 @@
-use crate::element::Element;
+use crate::element::{Element, StrokeStyle};
 use log::debug;
 use palette::Srgba;
 use piet::RenderContext;
 use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
-    let default_color = Srgba::new(0.0, 0.0, 0.0, 255.0);
+    let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
     let stroke_color = srgba_from_hex(&element.stroke_color).unwrap_or(default_color);
     let fill_color = srgba_from_hex(&element.background_color).unwrap_or(default_color);
     let options = OptionsBuilder::default()
+        .seed(element.seed)
+        .fill_style(element.fill_style.into_roughr())
+        .stroke_width(get_stroke_width(
+            &element.stroke_style,
+            element.stroke_width,
+        ))
+        .stroke_line_dash(stroke_line_dash(
+            &element.stroke_style,
+            element.stroke_width,
+        ))
+        .fill_weight(element.stroke_width / 2 as f32)
+        .hachure_gap(element.stroke_width * 4 as f32)
+        .disable_multi_stroke(element.stroke_style != StrokeStyle::Solid)
+        .roughness(element.roughness)
         .stroke(stroke_color)
         .fill(fill_color)
-        .fill_style(element.fill_style.into_roughr())
-        .fill_weight(element.stroke_width as f32)
+        .preserve_vertices(false)
         .build()
         .unwrap();
     let generator = KurboGenerator::new(options);
@@ -63,4 +76,21 @@ fn srgba_from_hex(hex: &str) -> Option<Srgba> {
 pub struct DrawConfig {
     pub offset_x: f32,
     pub offset_y: f32,
+}
+
+pub fn stroke_line_dash(stroke_style: &StrokeStyle, stroke_width: f32) -> Vec<f64> {
+    debug!("stroke_style: {:?}", stroke_style);
+    match stroke_style {
+        StrokeStyle::Solid => vec![],
+        StrokeStyle::Dashed => vec![8 as f64, 8 as f64 + stroke_width as f64],
+        StrokeStyle::Dotted => vec![1.5 as f64, 6 as f64 + stroke_width as f64],
+    }
+}
+
+pub fn get_stroke_width(stroke_style: &StrokeStyle, stroke_width: f32) -> f32 {
+    if stroke_style == &StrokeStyle::Solid {
+        stroke_width
+    } else {
+        stroke_width + 0.5 as f32
+    }
 }

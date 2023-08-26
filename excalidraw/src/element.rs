@@ -6,7 +6,7 @@ use roughr::core::OptionsBuilder;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "kebab-case")]
 pub enum FillStyle {
     Solid,
     Hachure,
@@ -45,6 +45,19 @@ pub enum ElementType {
     Selection,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum StrokeStyle {
+    Solid,
+    Dashed,
+    Dotted,
+}
+impl Default for StrokeStyle {
+    fn default() -> Self {
+        Self::Solid
+    }
+}
+
 impl Default for ElementType {
     fn default() -> Self {
         Self::Rectangle
@@ -66,10 +79,10 @@ pub struct Element {
     pub background_color: String,
     pub fill_style: FillStyle,
     pub stroke_width: f32,
-    pub stroke_style: String,
-    pub roughness: i64,
+    pub stroke_style: StrokeStyle,
+    pub roughness: f32,
     pub opacity: i64,
-    pub seed: i64,
+    pub seed: u64,
     pub version: i64,
     pub version_nonce: i64,
     pub is_deleted: bool,
