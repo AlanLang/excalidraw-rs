@@ -10,7 +10,7 @@ use axum::{
 };
 use excalidraw::Excalidraw;
 use log::debug;
-use piet_common::{kurbo::Rect, util, Color, Device, ImageFormat, RenderContext};
+use piet_common::{kurbo::Rect, util, Color, Device, ImageFormat, RenderContext, StrokeStyle};
 use png::{ColorType, Encoder};
 use std::{fs::read_to_string, io::Cursor, net::SocketAddr};
 
@@ -83,6 +83,15 @@ fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
     rc.fill(
         Rect::new(0.0, 0.0, width as f64, height as f64),
         &background_color,
+    );
+    let stroke_style = StrokeStyle::new()
+        .line_join(piet_common::LineJoin::Round)
+        .line_cap(piet_common::LineCap::Round);
+    rc.stroke_styled(
+        Rect::new(0.0, 0.0, width as f64, height as f64),
+        &background_color,
+        width as f64,
+        &stroke_style,
     );
     // 这里可能需要手动将绘图指令也放大两倍
     excalidraw.draw(&mut rc, padding);

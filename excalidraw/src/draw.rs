@@ -28,6 +28,8 @@ fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &Draw
         .stroke(stroke_color)
         .fill(fill_color)
         .preserve_vertices(false)
+        .line_cap(roughr::core::LineCap::Round)
+        .line_join(roughr::core::LineJoin::Round)
         .build()
         .unwrap();
     let generator = KurboGenerator::new(options);
