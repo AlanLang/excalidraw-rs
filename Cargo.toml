@@ -1,0 +1,17 @@
+[workspace]
+
+members = [
+    "excalidraw",
+    "excalidraw-viewer",
+    "excalidraw-web"
+]
+
+[workspace.dependencies]
+anyhow = "1.0.75"
+log = "0.4.20"
+palette = "0.7.3"
+piet = "0.6.2"
+rough_piet = "0.6.0"
+roughr = "0.6.0"
+serde = { version = "1.0.186", features = ["derive"] }
+serde_json = "1"

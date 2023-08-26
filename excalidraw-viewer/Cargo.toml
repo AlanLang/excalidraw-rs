@@ -1,0 +1,18 @@
+[package]
+name = "excalidraw-viewer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+excalidraw = { path = "../excalidraw" }
+log = { workspace = true }
+anyhow = {workspace = true}
+env_logger = "0.10.0"
+dotenv = "0.15.0"
+tokio = { version =  "1.27.0", features = ["rt-multi-thread", "macros"] }
+axum = {version = "0.6.18", features = ["headers"]}
+tokio-fs = "0.1.7"
+piet-common = {version = "0.6", features = ["png"]}
+png = { version = "0.17.10" }

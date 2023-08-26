@@ -1,0 +1,19 @@
+# https://github.com/thedodd/trunk/blob/master/Trunk.toml
+[serve]
+# The address to serve on.
+address = "127.0.0.1"
+# The port to serve on.
+port = 9998
+# Open a browser tab once the initial build is complete.
+open = true
+
+[[hooks]]
+stage = "build"
+command = "tailwindcss"
+command_arguments = [
+    "build",
+    "-i",
+    "index.css",
+    "-o",
+    "dist/.stage/style.css",
+]

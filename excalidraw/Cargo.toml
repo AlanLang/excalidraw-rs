@@ -1,0 +1,16 @@
+[package]
+name = "excalidraw"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { workspace = true }
+log = { workspace = true }
+palette = { workspace = true }
+piet = { workspace = true }
+rough_piet = { workspace = true }
+roughr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
