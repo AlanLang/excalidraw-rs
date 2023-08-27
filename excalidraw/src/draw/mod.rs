@@ -1,6 +1,6 @@
 mod diamond;
-mod options_generator;
 mod rectangle;
+mod utils;
 use crate::element::{Element, ElementType};
 use piet::RenderContext;
 use serde::{Deserialize, Serialize};

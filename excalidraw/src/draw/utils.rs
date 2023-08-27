@@ -1,4 +1,4 @@
-use crate::element::{Element, StrokeStyle};
+use crate::element::{Element, Roundness, RoundnessType, StrokeStyle};
 use log::debug;
 use palette::Srgba;
 use roughr::core::OptionsBuilder;
@@ -78,5 +78,22 @@ pub fn get_stroke_width(stroke_style: &StrokeStyle, stroke_width: f32) -> f32 {
         stroke_width
     } else {
         stroke_width + 0.5 as f32
+    }
+}
+
+pub fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
+    let default_proportional_radius = 0.25;
+    match roundness.type_field {
+        RoundnessType::Legacy => x * default_proportional_radius,
+        RoundnessType::ProportionalRadius => x * default_proportional_radius,
+        RoundnessType::AdaptiveRadius => {
+            let fixed_radius_size = roundness.value.unwrap_or(32.0);
+            let cutoff_size = fixed_radius_size / default_proportional_radius;
+            if x <= cutoff_size {
+                return x * default_proportional_radius;
+            }
+
+            return fixed_radius_size;
+        }
     }
 }

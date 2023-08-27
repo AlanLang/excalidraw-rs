@@ -1,13 +1,9 @@
-use crate::{
-    draw::options_generator::default_options_generator,
-    element::{Element, Roundness, RoundnessType},
-};
-use log::debug;
+use crate::{draw::utils::default_options_generator, element::Element};
 use piet::{kurbo, RenderContext};
 use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
 
-use super::DrawConfig;
+use super::{utils::get_corner_radius, DrawConfig};
 
 pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
     let mut options = OptionsBuilder::default();
@@ -15,8 +11,6 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
         .build()
         .unwrap();
     let generator = KurboGenerator::new(options);
-    debug!("element: {:?}", element);
-    debug!("config: {:?}", config);
     let path = match &element.roundness {
         Some(roundness) => {
             let w = element.width;
@@ -40,21 +34,4 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
     )));
     path.draw(ctx);
     let _ = ctx.restore();
-}
-
-fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
-    let default_proportional_radius = 0.25;
-    match roundness.type_field {
-        RoundnessType::Legacy => x * default_proportional_radius,
-        RoundnessType::ProportionalRadius => x * default_proportional_radius,
-        RoundnessType::AdaptiveRadius => {
-            let fixed_radius_size = roundness.value.unwrap_or(32.0);
-            let cutoff_size = fixed_radius_size / default_proportional_radius;
-            if x <= cutoff_size {
-                return x * default_proportional_radius;
-            }
-
-            return fixed_radius_size;
-        }
-    }
 }
