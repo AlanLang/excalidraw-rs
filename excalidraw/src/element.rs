@@ -39,6 +39,7 @@ impl FillStyle {
 #[serde(rename_all = "camelCase")]
 pub enum ElementType {
     Rectangle,
+    Diamond,
     Ellipse,
     Arrow,
     Text,

@@ -1,18 +1,20 @@
 use crate::element::{Element, Roundness, RoundnessType, StrokeStyle};
 use log::debug;
 use palette::Srgba;
-use piet::{kurbo, RenderContext};
-use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
-use serde::{Deserialize, Serialize};
 
-fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
+pub fn default_options_generator<'a, 'b>(
+    element: &'a Element,
+    continuous_path: bool,
+    options: &'b mut OptionsBuilder,
+) -> &'b mut OptionsBuilder {
     let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
     let stroke_color =
         srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
     let fill_color =
         srgba_from_hex(&element.background_color, element.opacity).unwrap_or(default_color);
-    let options = OptionsBuilder::default()
+
+    options
         .seed(element.seed)
         .fill_style(element.fill_style.into_roughr())
         .stroke_width(get_stroke_width(
@@ -26,46 +28,14 @@ fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &Draw
         .fill_weight(element.stroke_width / 2 as f32)
         .hachure_gap(element.stroke_width * 4 as f32)
         .disable_multi_stroke(element.stroke_style != StrokeStyle::Solid)
-        .roughness(element.roughness)
+        .roughness((element.roughness - 0.5).max(0.0))
         .stroke(stroke_color)
         .fill(fill_color)
-        .preserve_vertices(element.roundness.is_some())
+        .preserve_vertices(continuous_path)
         .line_cap(roughr::core::LineCap::Round)
-        .line_join(roughr::core::LineJoin::Round)
-        .build()
-        .unwrap();
-    let generator = KurboGenerator::new(options);
-    debug!("element: {:?}", element);
-    debug!("config: {:?}", config);
-    let path = match &element.roundness {
-        Some(roundness) => {
-            let w = element.width;
-            let h = element.height;
-            let r = get_corner_radius(w.min(h), roundness);
-            let path = format!(
-                "M {} 0 L {} 0 Q {} 0, {} {} L {} {} Q {} {}, {} {} L {} {} Q 0 {}, 0 {} L 0 {} Q 0 0, {} 0",
-                r,
-                w - r,
-                w,
-                w,r,w,h - r,w,h,w - r,h,r,h,h,h - r,r,r
-            );
-            generator.path::<f32>(path)
-        }
-        None => generator.rectangle::<f32>(0.0, 0.0, element.width, element.height),
-    };
-    let _ = ctx.save();
-    ctx.transform(kurbo::Affine::translate((
-        (element.x + config.offset_x) as f64,
-        (element.y + config.offset_y) as f64,
-    )));
-    path.draw(ctx);
-    let _ = ctx.restore();
-}
+        .line_join(roughr::core::LineJoin::Round);
 
-pub fn draw(ctx: &mut impl RenderContext, elements: &Vec<Element>, config: &DrawConfig) {
-    for element in elements {
-        draw_rectangle(ctx, element, config);
-    }
+    options
 }
 
 fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
@@ -94,13 +64,6 @@ fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
     Some(Srgba::new(r, g, b, a).into_format())
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DrawConfig {
-    pub offset_x: f32,
-    pub offset_y: f32,
-}
-
 pub fn stroke_line_dash(stroke_style: &StrokeStyle, stroke_width: f32) -> Vec<f64> {
     debug!("stroke_style: {:?}", stroke_style);
     match stroke_style {
@@ -118,7 +81,7 @@ pub fn get_stroke_width(stroke_style: &StrokeStyle, stroke_width: f32) -> f32 {
     }
 }
 
-fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
+pub fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
     let default_proportional_radius = 0.25;
     match roundness.type_field {
         RoundnessType::Legacy => x * default_proportional_radius,
