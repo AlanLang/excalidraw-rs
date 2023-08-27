@@ -28,7 +28,7 @@ pub fn default_options_generator<'a, 'b>(
         .fill_weight(element.stroke_width / 2 as f32)
         .hachure_gap(element.stroke_width * 4 as f32)
         .disable_multi_stroke(element.stroke_style != StrokeStyle::Solid)
-        .roughness(element.roughness)
+        .roughness((element.roughness - 0.5).max(0.0))
         .stroke(stroke_color)
         .fill(fill_color)
         .preserve_vertices(continuous_path)
