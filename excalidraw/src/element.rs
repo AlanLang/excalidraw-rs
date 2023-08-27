@@ -5,6 +5,8 @@ use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::point::Point;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FillStyle {
@@ -119,6 +121,7 @@ pub struct Element {
     pub updated: i64,
     pub locked: bool,
     pub roundness: Option<Roundness>,
+    pub points: Option<Vec<Point>>,
 }
 
 impl Element {

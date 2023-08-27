@@ -1,5 +1,6 @@
 mod draw;
 mod element;
+mod point;
 use draw::DrawConfig;
 use element::Element;
 
