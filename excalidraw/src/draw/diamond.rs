@@ -6,7 +6,7 @@ use log::debug;
 use palette::Srgba;
 use piet::{kurbo, RenderContext};
 use rough_piet::KurboGenerator;
-use roughr::core::OptionsBuilder;
+use roughr::{core::OptionsBuilder, Point2D};
 
 use super::DrawConfig;
 
@@ -20,7 +20,6 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
     debug!("config: {:?}", config);
     let (top_x, top_y, right_x, right_y, bottom_x, bottom_y, left_x, left_y) =
         get_diamond_points(element);
-    todo!("diamond");
     let path = match &element.roundness {
         Some(roundness) => {
             let w = element.width;
@@ -35,7 +34,15 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
           );
             generator.path::<f32>(path)
         }
-        None => generator.polygon::<f32>(0.0, 0.0, element.width, element.height),
+        None => {
+            let points = [
+                Point2D::new(top_x, top_y),
+                Point2D::new(right_x, right_y),
+                Point2D::new(bottom_x, bottom_y),
+                Point2D::new(left_x, left_y),
+            ];
+            generator.polygon::<f32>(&points)
+        }
     };
     let _ = ctx.save();
     ctx.transform(kurbo::Affine::translate((
