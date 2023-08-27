@@ -1,7 +1,7 @@
-use crate::element::{Element, StrokeStyle};
+use crate::element::{Element, Roundness, RoundnessType, StrokeStyle};
 use log::debug;
 use palette::Srgba;
-use piet::RenderContext;
+use piet::{kurbo, RenderContext};
 use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &Draw
         .roughness(element.roughness)
         .stroke(stroke_color)
         .fill(fill_color)
-        .preserve_vertices(false)
+        .preserve_vertices(element.roundness.is_some())
         .line_cap(roughr::core::LineCap::Round)
         .line_join(roughr::core::LineJoin::Round)
         .build()
@@ -37,13 +37,29 @@ fn draw_rectangle(ctx: &mut impl RenderContext, element: &Element, config: &Draw
     let generator = KurboGenerator::new(options);
     debug!("element: {:?}", element);
     debug!("config: {:?}", config);
-    let circle_paths = generator.rectangle::<f32>(
-        element.x + config.offset_x,
-        element.y + config.offset_y,
-        element.width,
-        element.height,
-    );
-    circle_paths.draw(ctx);
+    let path = match &element.roundness {
+        Some(roundness) => {
+            let w = element.width;
+            let h = element.height;
+            let r = get_corner_radius(w.min(h), roundness);
+            let path = format!(
+                "M {} 0 L {} 0 Q {} 0, {} {} L {} {} Q {} {}, {} {} L {} {} Q 0 {}, 0 {} L 0 {} Q 0 0, {} 0",
+                r,
+                w - r,
+                w,
+                w,r,w,h - r,w,h,w - r,h,r,h,h,h - r,r,r
+            );
+            generator.path::<f32>(path)
+        }
+        None => generator.rectangle::<f32>(0.0, 0.0, element.width, element.height),
+    };
+    let _ = ctx.save();
+    ctx.transform(kurbo::Affine::translate((
+        (element.x + config.offset_x) as f64,
+        (element.y + config.offset_y) as f64,
+    )));
+    path.draw(ctx);
+    let _ = ctx.restore();
 }
 
 pub fn draw(ctx: &mut impl RenderContext, elements: &Vec<Element>, config: &DrawConfig) {
@@ -99,5 +115,22 @@ pub fn get_stroke_width(stroke_style: &StrokeStyle, stroke_width: f32) -> f32 {
         stroke_width
     } else {
         stroke_width + 0.5 as f32
+    }
+}
+
+fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
+    let default_proportional_radius = 0.25;
+    match roundness.type_field {
+        RoundnessType::Legacy => x * default_proportional_radius,
+        RoundnessType::ProportionalRadius => x * default_proportional_radius,
+        RoundnessType::AdaptiveRadius => {
+            let fixed_radius_size = roundness.value.unwrap_or(32.0);
+            let cutoff_size = fixed_radius_size / default_proportional_radius;
+            if x <= cutoff_size {
+                return x * default_proportional_radius;
+            }
+
+            return fixed_radius_size;
+        }
     }
 }

@@ -3,7 +3,7 @@ use palette::Srgba;
 use piet::RenderContext;
 use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -64,6 +64,35 @@ impl Default for ElementType {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub enum RoundnessType {
+    Legacy,
+    ProportionalRadius,
+    AdaptiveRadius,
+}
+
+impl<'de> Deserialize<'de> for RoundnessType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let i = u8::deserialize(deserializer)?;
+        match i {
+            1 => Ok(RoundnessType::Legacy),
+            2 => Ok(RoundnessType::ProportionalRadius),
+            3 => Ok(RoundnessType::AdaptiveRadius),
+            _ => Err(serde::de::Error::custom("Invalid value")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Roundness {
+    #[serde(rename = "type")]
+    pub type_field: RoundnessType,
+    pub value: Option<f32>,
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Element {
@@ -88,6 +117,7 @@ pub struct Element {
     pub is_deleted: bool,
     pub updated: i64,
     pub locked: bool,
+    pub roundness: Option<Roundness>,
 }
 
 impl Element {
@@ -108,5 +138,28 @@ impl Element {
 
     pub fn get_size(&self) -> (f32, f32) {
         (self.width, self.height)
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_roundness_deserialization() {
+        let json_str = r#"{
+            "type": 3
+        }"#;
+
+        let result: Result<Roundness, serde_json::Error> = serde_json::from_str(json_str);
+
+        match result {
+            Ok(roundness) => {
+                assert_eq!(roundness.type_field, RoundnessType::AdaptiveRadius);
+                assert_eq!(roundness.value, None);
+            }
+            Err(e) => {
+                panic!("Deserialization error: {:?}", e);
+            }
+        }
     }
 }

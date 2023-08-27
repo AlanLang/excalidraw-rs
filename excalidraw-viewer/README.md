@@ -8,5 +8,5 @@
   * [x] Stroke Width
   * [x] Stroke Style
   * [x] Sloppiness
-  * [ ] Edges
+  * [x] Edges
   * [x] Opacity
