@@ -96,6 +96,14 @@ pub struct Roundness {
     pub value: Option<f32>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Arrowhead {
+    Arrow,
+    Bar,
+    Dot,
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Element {
@@ -122,6 +130,8 @@ pub struct Element {
     pub locked: bool,
     pub roundness: Option<Roundness>,
     pub points: Option<Vec<Point>>,
+    pub end_arrowhead: Option<String>,
+    pub start_arrowhead: Option<String>,
 }
 
 impl Element {
