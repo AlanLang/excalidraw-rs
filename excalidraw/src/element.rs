@@ -102,6 +102,7 @@ pub enum Arrowhead {
     Arrow,
     Bar,
     Dot,
+    Triangle,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -130,8 +131,8 @@ pub struct Element {
     pub locked: bool,
     pub roundness: Option<Roundness>,
     pub points: Option<Vec<Point>>,
-    pub end_arrowhead: Option<String>,
-    pub start_arrowhead: Option<String>,
+    pub end_arrowhead: Option<Arrowhead>,
+    pub start_arrowhead: Option<Arrowhead>,
 }
 
 impl Element {

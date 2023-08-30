@@ -1,4 +1,5 @@
 use super::DrawConfig;
+use crate::element::Arrowhead;
 use crate::point::Point;
 use crate::{draw::utils::default_options_generator, element::Element};
 use euclid::UnknownUnit;
@@ -32,8 +33,13 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
             let p = get_points2d(points);
             shape.push(generator.polygon(&p[..]));
         } else {
+            // 绘制曲线
             let generator = KurboGenerator::new(options.clone());
             let p = get_points2d(points);
+            let a = generator.linear_path(&p[..], false);
+            let points = a.sets[0].size;
+            debug!("{:?}", points);
+            todo!("根据曲线端点，计算箭头的角度");
             shape.push(generator.linear_path(&p[..], false));
         }
     } else {
@@ -51,4 +57,34 @@ fn get_points2d(points: &Vec<Point>) -> Vec<Point2D<f64, UnknownUnit>> {
         .iter()
         .map(|point| Point2D::new(point.x, point.y))
         .collect()
+}
+
+fn get_start_arrowhead_points(
+    element: &Element,
+    arrowhead: Arrowhead,
+    points: &Vec<Point>,
+) -> Vec<Point2D<f64, UnknownUnit>> {
+    let mut arrow_points: Vec<Point2D<f64, UnknownUnit>> = vec![];
+    if points.len() < 2 {
+        return arrow_points;
+    }
+    let start_point = points[0].clone();
+    let second_point = points[1].clone();
+    let length = hypot(
+        start_point.x - second_point.x,
+        start_point.y - second_point.y,
+    )
+    .min(30.0);
+    arrow_points.push(Point2D::new(start_point.x, start_point.y));
+    todo!()
+}
+
+pub fn hypot<T>(a: T, b: T) -> f64
+where
+    T: core::ops::Mul<T, Output = T>
+        + core::ops::Add<T, Output = T>
+        + core::convert::Into<f64>
+        + Copy,
+{
+    ((a * a + b * b).into()).sqrt()
 }
