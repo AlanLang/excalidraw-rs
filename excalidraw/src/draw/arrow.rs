@@ -40,6 +40,7 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
             let points = a.sets[0].size;
             debug!("{:?}", points);
             todo!("根据曲线端点，计算箭头的角度");
+            // https://github.com/excalidraw/excalidraw/pull/737/files
             shape.push(generator.linear_path(&p[..], false));
         }
     } else {
