@@ -4,7 +4,6 @@ use super::DrawConfig;
 use crate::point::Point;
 use crate::{draw::utils::default_options_generator, element::Element};
 use euclid::UnknownUnit;
-use log::debug;
 use palette::Srgba;
 use piet::kurbo::{BezPath, PathEl};
 use piet::{kurbo, RenderContext};
@@ -28,24 +27,28 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
         Some(points) => points,
         None => &default_points,
     };
-    debug!("{:?}", options.fill.is_some());
-    let mut shape: Vec<KurboDrawable<f64>> = vec![];
-    if element.roundness.is_none() {
-        let generator = KurboGenerator::new(options.clone());
-        let p = get_points2d(points);
-        // https://github.com/excalidraw/excalidraw/pull/737/files
-        shape.push(generator.linear_path(&p[..], false));
+    let mut shapes: Vec<KurboDrawable<f64>> = vec![];
+    let generator = KurboGenerator::new(options.clone());
+    let p = get_points2d(points);
+
+    let shape = if element.roundness.is_none() {
+        generator.linear_path(&p[..], false)
     } else {
-        let generator = KurboGenerator::new(options.clone());
-        let p = get_points2d(points);
-        let a = generator.curve(&p[..]);
-        shape.push(generator.curve(&p[..]));
-        let (x2, y2, x3, y3, x4, y4) = demo(&a, element);
-        shape.push(generator.linear_path(&[Point2D::new(x3, y3), Point2D::new(x2, y2)], true));
-        shape.push(generator.linear_path(&[Point2D::new(x4, y4), Point2D::new(x2, y2)], true));
+        generator.curve(&p[..])
+    };
+    if element.start_arrowhead.is_some() {
+        let (point1, point2, point3) = get_arrowhead_point(&shape, element, true);
+        shapes.push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+        shapes.push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
     }
-    // todo get_arrowhead_shapes
-    shape.iter().for_each(|s| s.draw(ctx));
+    if element.end_arrowhead.is_some() {
+        let (point1, point2, point3) = get_arrowhead_point(&shape, element, false);
+        shapes.push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+        shapes.push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+    }
+    shapes.push(shape);
+
+    shapes.iter().for_each(|s| s.draw(ctx));
     let _ = ctx.restore();
 }
 
@@ -72,17 +75,13 @@ fn get_curve_path_ops(shape: &KurboDrawable<f64>) -> &BezPath {
         if set.op_set_type == roughr::core::OpSetType::Path {
             return &set.ops;
         }
-        debug!("set {:?}", set);
     }
     &sets[0].ops
 }
 
-fn get_start_and_end_point(
-    ops: &BezPath,
-    is_start: bool,
-) -> (piet::kurbo::Point, piet::kurbo::Point) {
+fn get_start_and_end_point(ops: &BezPath, is_start: bool) -> (Point, Point) {
     let elements = ops.elements();
-    let index = if is_start { 0 } else { elements.len() - 1 };
+    let index = if is_start { 1 } else { elements.len() - 1 };
     let data = &elements[index];
     let binding = piet::kurbo::Point::default();
     let (p1, p2, p3) = match data {
@@ -104,16 +103,12 @@ fn get_start_and_end_point(
     let x2 = if is_start { p0.x } else { p3.x };
     let y2 = if is_start { p0.y } else { p3.y };
 
-    let end_point = piet::kurbo::Point::new(x1, y1);
-    let start_point = piet::kurbo::Point::new(x2, y2);
+    let end_point = Point::new(x1, y1);
+    let start_point = Point::new(x2, y2);
     (start_point, end_point)
 }
 
-fn get_arrow_point(
-    start_point: piet::kurbo::Point,
-    end_point: piet::kurbo::Point,
-    length: f64,
-) -> piet::kurbo::Point {
+fn get_arrow_point(start_point: Point, end_point: Point, length: f64) -> Point {
     let x2 = start_point.x;
     let y2 = start_point.y;
     let x1 = end_point.x;
@@ -127,40 +122,17 @@ fn get_arrow_point(
     let min_size = size.min(length / 2.0);
     let xs = x2 - nx * min_size;
     let ys = y2 - ny * min_size;
-    piet::kurbo::Point::new(xs, ys)
+    Point::new(xs, ys)
 }
 
-fn demo(shape: &KurboDrawable<f64>, element: &Element) -> (f64, f64, f64, f64, f64, f64) {
+fn get_arrowhead_point(
+    shape: &KurboDrawable<f64>,
+    element: &Element,
+    is_start: bool,
+) -> (Point, Point, Point) {
     let ops = get_curve_path_ops(shape);
-    let index = 1;
-    let data = &ops.elements()[index];
-    let binding = piet::kurbo::Point::default();
-    let (p1, p2, p3) = match data {
-        PathEl::CurveTo(p1, p2, p3) => (p1, p2, p3),
-        _ => (&binding, &binding, &binding),
-    };
+    let (start_point, end_point) = get_start_and_end_point(ops, is_start);
 
-    let mut p0 = piet::kurbo::Point::new(0.0, 0.0);
-    let prev_op = &ops.elements()[index - 1];
-    match prev_op {
-        PathEl::MoveTo(p) => {
-            p0 = p.clone();
-        }
-        PathEl::CurveTo(_, _, p3) => {
-            p0 = p3.clone();
-        }
-        _ => {}
-    }
-    let (x1, y1) = equation(0.3, &p0, p1, p2, p3);
-
-    let x2 = p0.x;
-    let y2 = p0.y;
-
-    let distance = hypot(x2 - x1, y2 - y1);
-    let nx = (x2 - x1) / distance;
-    let ny = (y2 - y1) / distance;
-
-    let size: f64 = 30.0;
     let mut length = 0.0;
 
     // arrowhead === arrow
@@ -172,18 +144,12 @@ fn demo(shape: &KurboDrawable<f64>, element: &Element) -> (f64, f64, f64, f64, f
         }
         length = hypot(point1.x - point2.x, point1.y - point2.y);
     }
-    let min_size = size.min(length / 2.0);
-    let xs = x2 - nx * min_size;
-    let ys = y2 - ny * min_size;
+    let arrow_point = get_arrow_point(start_point, end_point, length);
 
     let angle = 20.0;
-    let (x3, y3) = rotate(xs, ys, x2, y2, (-angle * PI) / 180.0);
-    let (x4, y4) = rotate(xs, ys, x2, y2, (angle * PI) / 180.0);
-    debug!("x1 {:?} y1 {:?}", x1, y1);
-    debug!("x2 {:?} y2 {:?}", x2, y2);
-    debug!("x3 {:?} y3 {:?}", x3, y3);
-    debug!("x4 {:?} y4 {:?}", x4, y4);
-    (x2, y2, x3, y3, x4, y4)
+    let point1 = rotate(arrow_point, start_point, (-angle * PI) / 180.0);
+    let point2 = rotate(arrow_point, start_point, (angle * PI) / 180.0);
+    (start_point, point1, point2)
 }
 
 fn equation(
@@ -205,9 +171,8 @@ fn equation(
     (x, y)
 }
 
-fn rotate(x1: f64, y1: f64, x2: f64, y2: f64, angle: f64) -> (f64, f64) {
-    (
-        (x1 - x2) * angle.cos() - (y1 - y2) * angle.sin() + x2,
-        (x1 - x2) * angle.sin() + (y1 - y2) * angle.cos() + y2,
-    )
+fn rotate(point1: Point, point2: Point, angle: f64) -> Point {
+    let x = (point1.x - point2.x) * angle.cos() - (point1.y - point2.y) * angle.sin() + point2.x;
+    let y = (point1.x - point2.x) * angle.sin() + (point1.y - point2.y) * angle.cos() + point2.y;
+    Point::new(x, y)
 }

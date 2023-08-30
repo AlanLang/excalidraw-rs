@@ -1,12 +1,13 @@
 use std::fmt;
 
+use euclid::{Point2D, UnknownUnit};
 use serde::{
     de::{self, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -15,6 +16,16 @@ pub struct Point {
 impl Default for Point {
     fn default() -> Self {
         Self { x: 0.0, y: 0.0 }
+    }
+}
+
+impl Point {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+
+    pub fn to_point2d(&self) -> Point2D<f64, UnknownUnit> {
+        Point2D::new(self.x, self.y)
     }
 }
 
