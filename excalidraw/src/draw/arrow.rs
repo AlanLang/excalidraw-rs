@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use super::utils::{get_points2d, srgba_from_hex};
+use super::utils::{get_points2d, hypot, srgba_from_hex};
 use super::DrawConfig;
 use crate::element::Arrowhead;
 use crate::point::Point;
@@ -160,16 +160,6 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
 
     shapes.iter().for_each(|s| s.draw(ctx));
     let _ = ctx.restore();
-}
-
-pub fn hypot<T>(a: T, b: T) -> f64
-where
-    T: core::ops::Mul<T, Output = T>
-        + core::ops::Add<T, Output = T>
-        + core::convert::Into<f64>
-        + Copy,
-{
-    ((a * a + b * b).into()).sqrt()
 }
 
 fn get_curve_path_ops(shape: &KurboDrawable<f64>) -> &BezPath {

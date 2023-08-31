@@ -107,3 +107,31 @@ pub fn get_points2d(points: &Vec<Point>) -> Vec<Point2D<f64, UnknownUnit>> {
         .map(|point| Point2D::new(point.x, point.y))
         .collect()
 }
+
+pub fn is_path_loop(points: &Vec<Point>) -> bool {
+    if points.len() >= 3 {
+        let first = points.first().unwrap();
+        let last = points.last().unwrap();
+        let distance = distance2d(first, last);
+
+        // Adjusting LINE_CONFIRM_THRESHOLD to current zoom so that when zoomed in
+        // really close we make the threshold smaller, and vice versa.
+        return distance <= 0.0;
+    }
+    false
+}
+fn distance2d(point1: &Point, point2: &Point) -> f64 {
+    let xd = point2.x - point1.x;
+    let yd = point2.y - point1.y;
+    hypot(xd, yd)
+}
+
+pub fn hypot<T>(a: T, b: T) -> f64
+where
+    T: core::ops::Mul<T, Output = T>
+        + core::ops::Add<T, Output = T>
+        + core::convert::Into<f64>
+        + Copy,
+{
+    ((a * a + b * b).into()).sqrt()
+}

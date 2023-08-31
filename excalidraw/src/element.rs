@@ -116,7 +116,7 @@ pub struct Element {
     pub y: f32,
     pub width: f32,
     pub height: f32,
-    pub angle: i64,
+    pub angle: f32,
     pub stroke_color: String,
     pub background_color: String,
     pub fill_style: FillStyle,

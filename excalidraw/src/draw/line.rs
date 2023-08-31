@@ -4,20 +4,24 @@ use piet::{kurbo, RenderContext};
 use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
 
-use super::{utils::get_points2d, DrawConfig};
+use super::{
+    utils::{get_points2d, is_path_loop},
+    DrawConfig,
+};
 
 pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
     let mut options = OptionsBuilder::default();
-    let options = default_options_generator(element, element.roundness.is_some(), &mut options)
-        .fill(Srgba::new(0.0, 0.0, 0.0, 0.0))
-        .build()
-        .unwrap();
+    let options = default_options_generator(element, element.roundness.is_some(), &mut options);
+
     let default_points = vec![Point::default(), Point::default()];
     let points = match &element.points {
         Some(points) => points,
         None => &default_points,
     };
-    let generator = KurboGenerator::new(options);
+    if !is_path_loop(points) {
+        options.fill(Srgba::new(0.0, 0.0, 0.0, 0.0));
+    }
+    let generator = KurboGenerator::new(options.build().unwrap());
     let p = get_points2d(points);
 
     let shape = if element.roundness.is_none() {
