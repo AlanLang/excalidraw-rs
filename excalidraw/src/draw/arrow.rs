@@ -1,22 +1,22 @@
 use std::f64::consts::PI;
 
+use super::utils::srgba_from_hex;
 use super::DrawConfig;
-use crate::point::Point;
+use crate::element::Arrowhead;
+use crate::point::{self, Point};
 use crate::{draw::utils::default_options_generator, element::Element};
 use euclid::UnknownUnit;
 use palette::Srgba;
 use piet::kurbo::{BezPath, PathEl};
 use piet::{kurbo, RenderContext};
 use rough_piet::{KurboDrawable, KurboGenerator};
-use roughr::core::OptionsBuilder;
+use roughr::core::{FillStyle, OptionsBuilder};
 use roughr::Point2D;
 
 pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
     let mut options = OptionsBuilder::default();
-    let options = default_options_generator(element, element.roundness.is_some(), &mut options)
-        .fill(Srgba::new(0.0, 0.0, 0.0, 0.0))
-        .build()
-        .unwrap();
+    let options = default_options_generator(element, element.roundness.is_some(), &mut options);
+
     let _ = ctx.save();
     ctx.transform(kurbo::Affine::translate((
         (element.x + config.offset_x) as f64,
@@ -28,7 +28,14 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
         None => &default_points,
     };
     let mut shapes: Vec<KurboDrawable<f64>> = vec![];
-    let generator = KurboGenerator::new(options.clone());
+
+    let generator = KurboGenerator::new(
+        options
+            .clone()
+            .fill(Srgba::new(0.0, 0.0, 0.0, 0.0))
+            .build()
+            .unwrap(),
+    );
     let p = get_points2d(points);
 
     let shape = if element.roundness.is_none() {
@@ -36,16 +43,121 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
     } else {
         generator.curve(&p[..])
     };
-    if element.start_arrowhead.is_some() {
-        let (point1, point2, point3) = get_arrowhead_point(&shape, element, true);
-        shapes.push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
-        shapes.push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+
+    match &element.start_arrowhead {
+        Some(start_arrowhead) => match start_arrowhead {
+            Arrowhead::Arrow => {
+                let (point1, point2, point3) = get_arrow_arrowhead_point(&shape, element, true);
+                shapes
+                    .push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+                shapes
+                    .push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+            }
+            Arrowhead::Bar => {
+                let (point1, point2, point3) = get_bar_arrowhead_point(&shape, element, true);
+                shapes
+                    .push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+                shapes
+                    .push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+            }
+            Arrowhead::Dot => {
+                let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
+                let stroke_color =
+                    srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
+                let generator = KurboGenerator::new(
+                    options
+                        .clone()
+                        .fill(stroke_color)
+                        .fill_style(FillStyle::Solid)
+                        .build()
+                        .unwrap(),
+                );
+                let (point, r) = get_dot_arrowhead_point(&shape, element, true);
+                shapes.push(generator.circle(point.x, point.y, r));
+            }
+            Arrowhead::Triangle => {
+                let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
+                let stroke_color =
+                    srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
+                let generator = KurboGenerator::new(
+                    options
+                        .clone()
+                        .fill(stroke_color)
+                        .fill_style(FillStyle::Solid)
+                        .stroke_line_dash([].to_vec())
+                        .build()
+                        .unwrap(),
+                );
+                let (point1, point2, point3) = get_triangle_arrowhead_point(&shape, element, true);
+                let p = vec![
+                    point1.to_point2d(),
+                    point2.to_point2d(),
+                    point3.to_point2d(),
+                    point1.to_point2d(),
+                ];
+                shapes.push(generator.polygon(&p[..]));
+            }
+        },
+        None => {}
     }
-    if element.end_arrowhead.is_some() {
-        let (point1, point2, point3) = get_arrowhead_point(&shape, element, false);
-        shapes.push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
-        shapes.push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+
+    match &element.end_arrowhead {
+        Some(end_arrowhead) => match end_arrowhead {
+            Arrowhead::Arrow => {
+                let (point1, point2, point3) = get_arrow_arrowhead_point(&shape, element, false);
+                shapes
+                    .push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+                shapes
+                    .push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+            }
+            Arrowhead::Bar => {
+                let (point1, point2, point3) = get_bar_arrowhead_point(&shape, element, false);
+                shapes
+                    .push(generator.linear_path(&[point2.to_point2d(), point1.to_point2d()], true));
+                shapes
+                    .push(generator.linear_path(&[point3.to_point2d(), point1.to_point2d()], true));
+            }
+            Arrowhead::Dot => {
+                let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
+                let stroke_color =
+                    srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
+                let generator = KurboGenerator::new(
+                    options
+                        .clone()
+                        .fill(stroke_color)
+                        .fill_style(FillStyle::Solid)
+                        .build()
+                        .unwrap(),
+                );
+                let (point, r) = get_dot_arrowhead_point(&shape, element, false);
+                shapes.push(generator.circle(point.x, point.y, r));
+            }
+            Arrowhead::Triangle => {
+                let default_color = Srgba::new(0.0, 0.0, 0.0, 0.0);
+                let stroke_color =
+                    srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
+                let generator = KurboGenerator::new(
+                    options
+                        .clone()
+                        .fill(stroke_color)
+                        .fill_style(FillStyle::Solid)
+                        .stroke_line_dash([].to_vec())
+                        .build()
+                        .unwrap(),
+                );
+                let (point1, point2, point3) = get_triangle_arrowhead_point(&shape, element, false);
+                let p = vec![
+                    point1.to_point2d(),
+                    point2.to_point2d(),
+                    point3.to_point2d(),
+                    point1.to_point2d(),
+                ];
+                shapes.push(generator.polygon(&p[..]));
+            }
+        },
+        None => {}
     }
+
     shapes.push(shape);
 
     shapes.iter().for_each(|s| s.draw(ctx));
@@ -108,7 +220,7 @@ fn get_start_and_end_point(ops: &BezPath, is_start: bool) -> (Point, Point) {
     (start_point, end_point)
 }
 
-fn get_arrow_point(start_point: Point, end_point: Point, length: f64) -> Point {
+fn get_arrow_point(start_point: Point, end_point: Point, length: f64, size: f64) -> Point {
     let x2 = start_point.x;
     let y2 = start_point.y;
     let x1 = end_point.x;
@@ -118,14 +230,16 @@ fn get_arrow_point(start_point: Point, end_point: Point, length: f64) -> Point {
     let nx = (x2 - x1) / distance;
     let ny = (y2 - y1) / distance;
 
-    let size: f64 = 30.0;
     let min_size = size.min(length / 2.0);
     let xs = x2 - nx * min_size;
     let ys = y2 - ny * min_size;
     Point::new(xs, ys)
 }
 
-fn get_arrowhead_point(
+/**
+ * 生成箭头数据
+ */
+fn get_arrow_arrowhead_point(
     shape: &KurboDrawable<f64>,
     element: &Element,
     is_start: bool,
@@ -136,6 +250,7 @@ fn get_arrowhead_point(
     let mut length = 0.0;
 
     // arrowhead === arrow
+    // Length for -> arrows is based on the length of the last section
     if let Some(points) = &element.points {
         let point1 = points.last().unwrap();
         let mut point2 = Point::default();
@@ -144,9 +259,90 @@ fn get_arrowhead_point(
         }
         length = hypot(point1.x - point2.x, point1.y - point2.y);
     }
-    let arrow_point = get_arrow_point(start_point, end_point, length);
+    let arrow_point = get_arrow_point(start_point, end_point, length, 30.0);
 
     let angle = 20.0;
+    let point1 = rotate(arrow_point, start_point, (-angle * PI) / 180.0);
+    let point2 = rotate(arrow_point, start_point, (angle * PI) / 180.0);
+    (start_point, point1, point2)
+}
+
+fn get_bar_arrowhead_point(
+    shape: &KurboDrawable<f64>,
+    element: &Element,
+    is_start: bool,
+) -> (Point, Point, Point) {
+    let ops = get_curve_path_ops(shape);
+    let (start_point, end_point) = get_start_and_end_point(ops, is_start);
+
+    let mut length = 0.0;
+
+    // Length for other arrowhead types is based on the total length of the line
+    if let Some(points) = &element.points {
+        for (index, point) in points.iter().enumerate() {
+            if index == 0 {
+                continue;
+            }
+            let prev_point = &points[index - 1];
+            length += hypot(point.x - prev_point.x, point.y - prev_point.y);
+        }
+    }
+    let arrow_point = get_arrow_point(start_point, end_point, length, 15.0);
+
+    let angle = 90.0;
+    let point1 = rotate(arrow_point, start_point, (-angle * PI) / 180.0);
+    let point2 = rotate(arrow_point, start_point, (angle * PI) / 180.0);
+    (start_point, point1, point2)
+}
+
+fn get_dot_arrowhead_point(
+    shape: &KurboDrawable<f64>,
+    element: &Element,
+    is_start: bool,
+) -> (Point, f64) {
+    let ops = get_curve_path_ops(shape);
+    let (start_point, end_point) = get_start_and_end_point(ops, is_start);
+    let mut length = 0.0;
+
+    // Length for other arrowhead types is based on the total length of the line
+    if let Some(points) = &element.points {
+        for (index, point) in points.iter().enumerate() {
+            if index == 0 {
+                continue;
+            }
+            let prev_point = &points[index - 1];
+            length += hypot(point.x - prev_point.x, point.y - prev_point.y);
+        }
+    }
+    let arrow_point = get_arrow_point(start_point, end_point, length, 15.0);
+    let r = hypot(arrow_point.y - start_point.y, arrow_point.x - start_point.x)
+        + element.stroke_width as f64;
+    (start_point, r)
+}
+
+fn get_triangle_arrowhead_point(
+    shape: &KurboDrawable<f64>,
+    element: &Element,
+    is_start: bool,
+) -> (Point, Point, Point) {
+    let ops = get_curve_path_ops(shape);
+    let (start_point, end_point) = get_start_and_end_point(ops, is_start);
+
+    let mut length = 0.0;
+
+    // Length for other arrowhead types is based on the total length of the line
+    if let Some(points) = &element.points {
+        for (index, point) in points.iter().enumerate() {
+            if index == 0 {
+                continue;
+            }
+            let prev_point = &points[index - 1];
+            length += hypot(point.x - prev_point.x, point.y - prev_point.y);
+        }
+    }
+    let arrow_point = get_arrow_point(start_point, end_point, length, 15.0);
+
+    let angle = 25.0;
     let point1 = rotate(arrow_point, start_point, (-angle * PI) / 180.0);
     let point2 = rotate(arrow_point, start_point, (angle * PI) / 180.0);
     (start_point, point1, point2)

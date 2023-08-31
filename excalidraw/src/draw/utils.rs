@@ -37,7 +37,7 @@ pub fn default_options_generator<'a, 'b>(
     options
 }
 
-fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
+pub fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
     // Remove the leading '#' if it exists
     let hex = hex.trim_start_matches('#');
 
