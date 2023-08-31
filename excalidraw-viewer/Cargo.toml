@@ -16,3 +16,4 @@ axum = {version = "0.6.18", features = ["headers"]}
 tokio-fs = "0.1.7"
 piet-common = {version = "0.6", features = ["png"]}
 png = { version = "0.17.10" }
+blake3 = "1.4.1"

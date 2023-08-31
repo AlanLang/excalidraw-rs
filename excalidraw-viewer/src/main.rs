@@ -52,22 +52,43 @@ async fn image_file(Path(path): Path<String>) -> impl IntoResponse {
 }
 
 fn make_electrical_diagram(file_path: &str) -> Result<Response<Body>> {
-    let result = get_excalidraw(file_path)?;
-    let buffer = draw_excalidraw(&result)?;
+    let file = read_to_string(file_path)?;
+    let hash1 = blake3::hash(&file.as_bytes());
+
+    let hash_file_name = format!("{}.txt", file_path);
+    let image_file_name = format!("{}.png", file_path);
+
+    let saved_hash = match read_to_string(&hash_file_name) {
+        Ok(content) => content,
+        Err(_) => String::new(),
+    };
+
+    if saved_hash == hash1.to_hex().to_string() {
+        // 如果系统有这个文件就直接返回
+        if std::path::Path::new(&image_file_name).exists() {
+            let buffer = std::fs::read(&image_file_name)?;
+            let mut response = Response::new(Body::from(buffer));
+            response
+                .headers_mut()
+                .insert("Content-Type", "image/png".parse()?);
+            return Ok(response);
+        }
+    }
+
+    let result = Excalidraw::from_json(&file)?;
+
+    let buffer = draw_excalidraw(&result, &image_file_name)?;
     let mut response = Response::new(Body::from(buffer));
     response
         .headers_mut()
         .insert("Content-Type", "image/png".parse()?);
+    // 保存文件
+    std::fs::write(&hash_file_name, hash1.to_hex().to_string())?;
     Ok(response)
 }
 
-fn get_excalidraw(file_path: &str) -> Result<Excalidraw> {
-    let file = read_to_string(file_path)?;
-    let result = Excalidraw::from_json(&file)?;
-    Ok(result)
-}
-
-fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
+fn draw_excalidraw(excalidraw: &Excalidraw, file_name: &str) -> Result<Vec<u8>> {
+    debug!("开始绘制");
     let padding = 100 as f32;
     let mut device = Device::new().map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     let rect = excalidraw.get_canvas_size();
@@ -96,16 +117,17 @@ fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
     );
     // 这里可能需要手动将绘图指令也放大两倍
     excalidraw.draw(&mut rc, padding);
-
     rc.finish()
         .map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     std::mem::drop(rc);
+    debug!("绘制完成");
 
     let mut buffer = vec![0; width * height * 4];
     bitmap
         .copy_raw_pixels(ImageFormat::RgbaPremul, &mut buffer)
         .map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     util::unpremultiply_rgba(&mut buffer);
+    bitmap.save_to_file(file_name).expect("file save error");
     let mut png_buffer = Vec::new();
     {
         let writer = Cursor::new(&mut png_buffer);
@@ -119,5 +141,6 @@ fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
             .write_image_data(&buffer)
             .map_err(|e| anyhow::anyhow!("Error writing PNG image data: {:?}", e))?;
     }
+    debug!("生成图片");
     Ok(png_buffer)
 }
