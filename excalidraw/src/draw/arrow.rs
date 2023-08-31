@@ -1,17 +1,15 @@
 use std::f64::consts::PI;
 
-use super::utils::srgba_from_hex;
+use super::utils::{get_points2d, srgba_from_hex};
 use super::DrawConfig;
 use crate::element::Arrowhead;
-use crate::point::{self, Point};
+use crate::point::Point;
 use crate::{draw::utils::default_options_generator, element::Element};
-use euclid::UnknownUnit;
 use palette::Srgba;
 use piet::kurbo::{BezPath, PathEl};
 use piet::{kurbo, RenderContext};
 use rough_piet::{KurboDrawable, KurboGenerator};
 use roughr::core::{FillStyle, OptionsBuilder};
-use roughr::Point2D;
 
 pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig) {
     let mut options = OptionsBuilder::default();
@@ -162,13 +160,6 @@ pub fn draw(ctx: &mut impl RenderContext, element: &Element, config: &DrawConfig
 
     shapes.iter().for_each(|s| s.draw(ctx));
     let _ = ctx.restore();
-}
-
-fn get_points2d(points: &Vec<Point>) -> Vec<Point2D<f64, UnknownUnit>> {
-    points
-        .iter()
-        .map(|point| Point2D::new(point.x, point.y))
-        .collect()
 }
 
 pub fn hypot<T>(a: T, b: T) -> f64

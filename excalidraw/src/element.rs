@@ -44,6 +44,7 @@ pub enum ElementType {
     Diamond,
     Ellipse,
     Arrow,
+    Line,
     Text,
     Selection,
 }

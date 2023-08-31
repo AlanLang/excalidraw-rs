@@ -1,4 +1,8 @@
-use crate::element::{Element, Roundness, RoundnessType, StrokeStyle};
+use crate::{
+    element::{Element, Roundness, RoundnessType, StrokeStyle},
+    point::Point,
+};
+use euclid::{Point2D, UnknownUnit};
 use log::debug;
 use palette::Srgba;
 use roughr::core::OptionsBuilder;
@@ -95,4 +99,11 @@ pub fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
             return fixed_radius_size;
         }
     }
+}
+
+pub fn get_points2d(points: &Vec<Point>) -> Vec<Point2D<f64, UnknownUnit>> {
+    points
+        .iter()
+        .map(|point| Point2D::new(point.x, point.y))
+        .collect()
 }
