@@ -1,5 +1,7 @@
+mod arrow;
 mod diamond;
 mod ellipse;
+mod line;
 mod rectangle;
 mod utils;
 use crate::element::{Element, ElementType};
@@ -22,6 +24,8 @@ pub fn draw(ctx: &mut impl RenderContext, elements: &Vec<Element>, config: &Draw
             ElementType::Rectangle => rectangle::draw(ctx, element, config),
             ElementType::Diamond => diamond::draw(ctx, element, config),
             ElementType::Ellipse => ellipse::draw(ctx, element, config),
+            ElementType::Arrow => arrow::draw(ctx, element, config),
+            ElementType::Line => line::draw(ctx, element, config),
             _ => {}
         }
     }

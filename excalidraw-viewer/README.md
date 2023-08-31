@@ -28,3 +28,11 @@
   * [x] Sloppiness
   * [x] Edges
   * [x] Opacity
+* [ ] Arrow
+  * [ ] Stroke
+  * [ ] Stroke Width
+  * [ ] Stroke Style
+  * [ ] Sloppiness
+  * [ ] Edges
+  * [ ] Arrowheads
+  * [ ] Opacity

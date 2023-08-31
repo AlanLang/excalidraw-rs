@@ -1,4 +1,8 @@
-use crate::element::{Element, Roundness, RoundnessType, StrokeStyle};
+use crate::{
+    element::{Element, Roundness, RoundnessType, StrokeStyle},
+    point::Point,
+};
+use euclid::{Point2D, UnknownUnit};
 use log::debug;
 use palette::Srgba;
 use roughr::core::OptionsBuilder;
@@ -13,7 +17,6 @@ pub fn default_options_generator<'a, 'b>(
         srgba_from_hex(&element.stroke_color, element.opacity).unwrap_or(default_color);
     let fill_color =
         srgba_from_hex(&element.background_color, element.opacity).unwrap_or(default_color);
-
     options
         .seed(element.seed)
         .fill_style(element.fill_style.into_roughr())
@@ -28,7 +31,7 @@ pub fn default_options_generator<'a, 'b>(
         .fill_weight(element.stroke_width / 2 as f32)
         .hachure_gap(element.stroke_width * 4 as f32)
         .disable_multi_stroke(element.stroke_style != StrokeStyle::Solid)
-        .roughness((element.roughness - 0.5).max(0.0))
+        .roughness(element.roughness)
         .stroke(stroke_color)
         .fill(fill_color)
         .preserve_vertices(continuous_path)
@@ -38,7 +41,7 @@ pub fn default_options_generator<'a, 'b>(
     options
 }
 
-fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
+pub fn srgba_from_hex(hex: &str, opacity: u8) -> Option<Srgba> {
     // Remove the leading '#' if it exists
     let hex = hex.trim_start_matches('#');
 
@@ -96,4 +99,11 @@ pub fn get_corner_radius(x: f32, roundness: &Roundness) -> f32 {
             return fixed_radius_size;
         }
     }
+}
+
+pub fn get_points2d(points: &Vec<Point>) -> Vec<Point2D<f64, UnknownUnit>> {
+    points
+        .iter()
+        .map(|point| Point2D::new(point.x, point.y))
+        .collect()
 }

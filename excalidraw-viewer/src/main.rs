@@ -71,6 +71,7 @@ fn draw_excalidraw(excalidraw: &Excalidraw) -> Result<Vec<u8>> {
     let padding = 100 as f32;
     let mut device = Device::new().map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     let rect = excalidraw.get_canvas_size();
+    println!("rect: {:?}", rect);
     let scale_factor = 4.0; // 4倍的缩放因子
     let width = ((rect.width + padding * 2 as f32) as f64 * scale_factor) as usize;
     let height = ((rect.height + padding * 2 as f32) as f64 * scale_factor) as usize;

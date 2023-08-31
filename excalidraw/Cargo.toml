@@ -14,3 +14,4 @@ rough_piet = { workspace = true }
 roughr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+euclid = "0.22.9"

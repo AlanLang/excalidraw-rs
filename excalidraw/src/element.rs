@@ -5,6 +5,8 @@ use rough_piet::KurboGenerator;
 use roughr::core::OptionsBuilder;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::point::Point;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FillStyle {
@@ -42,6 +44,7 @@ pub enum ElementType {
     Diamond,
     Ellipse,
     Arrow,
+    Line,
     Text,
     Selection,
 }
@@ -94,6 +97,15 @@ pub struct Roundness {
     pub value: Option<f32>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Arrowhead {
+    Arrow,
+    Bar,
+    Dot,
+    Triangle,
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Element {
@@ -119,6 +131,9 @@ pub struct Element {
     pub updated: i64,
     pub locked: bool,
     pub roundness: Option<Roundness>,
+    pub points: Option<Vec<Point>>,
+    pub end_arrowhead: Option<Arrowhead>,
+    pub start_arrowhead: Option<Arrowhead>,
 }
 
 impl Element {

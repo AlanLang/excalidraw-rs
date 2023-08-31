@@ -1,5 +1,6 @@
 mod draw;
 mod element;
+mod point;
 use draw::DrawConfig;
 use element::Element;
 
@@ -56,10 +57,19 @@ impl Excalidraw {
      * 获取画布大小（所有 elements 的外接矩形）
      */
     pub fn get_canvas_size(&self) -> Rect {
-        let mut min_x = std::f32::MAX;
-        let mut min_y = std::f32::MAX;
-        let mut max_x = 0.0;
-        let mut max_y = 0.0;
+        if &self.elements.len() == &(0 as usize) {
+            return Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 0.0,
+                height: 0.0,
+            };
+        };
+        let first_element = &self.elements[0];
+        let mut min_x = first_element.x;
+        let mut min_y = first_element.y;
+        let mut max_x = min_x;
+        let mut max_y = min_y;
         for element in &self.elements {
             if element.x < min_x {
                 min_x = element.x;
@@ -74,6 +84,7 @@ impl Excalidraw {
                 max_y = element.y + element.height;
             }
         }
+
         Rect {
             x: min_x,
             y: min_y,
