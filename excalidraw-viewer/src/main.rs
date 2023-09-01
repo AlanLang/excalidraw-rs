@@ -2,7 +2,7 @@ extern crate dotenv;
 use anyhow::Result;
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -12,7 +12,7 @@ use excalidraw::Excalidraw;
 use log::debug;
 use piet_common::{kurbo::Rect, util, Color, Device, ImageFormat, RenderContext, StrokeStyle};
 use png::{ColorType, Encoder};
-use std::{fs::read_to_string, io::Cursor, net::SocketAddr};
+use std::{collections::HashMap, fs::read_to_string, io::Cursor, net::SocketAddr};
 
 #[tokio::main]
 async fn main() {
@@ -36,11 +36,39 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-async fn image_file(Path(path): Path<String>) -> impl IntoResponse {
-    let file_path = format!("files/{}", path); // 请确保你有一个名为 `relative_directory` 的目录，并且里面有你想要访问的文件。
-    debug!("file_path: {}", file_path);
+#[derive(Debug, Clone)]
+struct DrawConfig {
+    no_cache: bool,
+    padding: f32,
+    pixel: f64,
+}
 
-    match make_electrical_diagram(&file_path) {
+async fn image_file(
+    Path(path): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let file_path = format!("files/{}", path); // 请确保你有一个名为 `relative_directory` 的目录，并且里面有你想要访问的文件。
+    let nocache = params.get("nocache").is_some();
+    let padding = params
+        .get("padding")
+        .unwrap_or(&"100".to_string())
+        .parse::<f32>()
+        .unwrap_or(100.0);
+    let pixel = params
+        .get("pixel")
+        .unwrap_or(&"4".to_string())
+        .parse::<f64>()
+        .unwrap_or(4.0);
+    let draw_config = DrawConfig {
+        no_cache: nocache,
+        padding,
+        pixel,
+    };
+
+    debug!("file_path: {}", file_path);
+    println!("no_catch: {:?}", nocache);
+
+    match make_electrical_diagram(&file_path, &draw_config) {
         Ok(content) => content,
         Err(e) => {
             let not_found = e.to_string();
@@ -51,49 +79,54 @@ async fn image_file(Path(path): Path<String>) -> impl IntoResponse {
     }
 }
 
-fn make_electrical_diagram(file_path: &str) -> Result<Response<Body>> {
+fn make_electrical_diagram(file_path: &str, draw_config: &DrawConfig) -> Result<Response<Body>> {
     let file = read_to_string(file_path)?;
-    let hash1 = blake3::hash(&file.as_bytes());
-
-    let hash_file_name = format!("{}.txt", file_path);
     let image_file_name = format!("{}.png", file_path);
 
-    let saved_hash = match read_to_string(&hash_file_name) {
-        Ok(content) => content,
-        Err(_) => String::new(),
-    };
+    if !draw_config.no_cache {
+        let hash1 = blake3::hash(&file.as_bytes());
+        let hash_file_name = format!("{}.txt", file_path);
 
-    if saved_hash == hash1.to_hex().to_string() {
-        // 如果系统有这个文件就直接返回
-        if std::path::Path::new(&image_file_name).exists() {
-            let buffer = std::fs::read(&image_file_name)?;
-            let mut response = Response::new(Body::from(buffer));
-            response
-                .headers_mut()
-                .insert("Content-Type", "image/png".parse()?);
-            return Ok(response);
+        let saved_hash = match read_to_string(&hash_file_name) {
+            Ok(content) => content,
+            Err(_) => String::new(),
+        };
+        // 保存文件
+        std::fs::write(&hash_file_name, hash1.to_hex().to_string())?;
+        if saved_hash == hash1.to_hex().to_string() {
+            // 如果系统有这个文件就直接返回
+            if std::path::Path::new(&image_file_name).exists() {
+                let buffer = std::fs::read(&image_file_name)?;
+                let mut response = Response::new(Body::from(buffer));
+                response
+                    .headers_mut()
+                    .insert("Content-Type", "image/png".parse()?);
+                return Ok(response);
+            }
         }
     }
 
     let result = Excalidraw::from_json(&file)?;
 
-    let buffer = draw_excalidraw(&result, &image_file_name)?;
+    let buffer = draw_excalidraw(&result, &image_file_name, draw_config)?;
     let mut response = Response::new(Body::from(buffer));
     response
         .headers_mut()
         .insert("Content-Type", "image/png".parse()?);
-    // 保存文件
-    std::fs::write(&hash_file_name, hash1.to_hex().to_string())?;
     Ok(response)
 }
 
-fn draw_excalidraw(excalidraw: &Excalidraw, file_name: &str) -> Result<Vec<u8>> {
+fn draw_excalidraw(
+    excalidraw: &Excalidraw,
+    file_name: &str,
+    draw_config: &DrawConfig,
+) -> Result<Vec<u8>> {
     debug!("开始绘制");
-    let padding = 100 as f32;
+    let padding = draw_config.padding;
     let mut device = Device::new().map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
     let rect = excalidraw.get_canvas_size();
     println!("rect: {:?}", rect);
-    let scale_factor = 4.0; // 4倍的缩放因子
+    let scale_factor = draw_config.pixel;
     let width = ((rect.width + padding * 2 as f32) as f64 * scale_factor) as usize;
     let height = ((rect.height + padding * 2 as f32) as f64 * scale_factor) as usize;
     debug!("width: {}, height: {}", width, height);
@@ -115,7 +148,6 @@ fn draw_excalidraw(excalidraw: &Excalidraw, file_name: &str) -> Result<Vec<u8>> 
         width as f64,
         &stroke_style,
     );
-    // 这里可能需要手动将绘图指令也放大两倍
     excalidraw.draw(&mut rc, padding);
     rc.finish()
         .map_err(|e| anyhow::anyhow!("Piet error: {:?}", e))?;
